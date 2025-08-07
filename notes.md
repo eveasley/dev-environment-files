@@ -1,12 +1,4 @@
-Perfect — thanks for clarifying. If you’re **not using Homebrew on WSL**, we’ll update your Oh My Zsh-based `.zshrc` accordingly to:
-
-* ✅ Use **standard Linux paths**
-* ✅ Avoid any `brew` references
-* ✅ Assume tools like `zsh-autosuggestions`, `fzf`, `bat`, `eza`, etc. are installed via `apt`, `curl`, `git`, or manually
-
----
-
-### ✅ Final `.zshrc` for **WSL + Oh My Zsh (No Homebrew)**
+# Customization
 
 ```zsh
 # ---- Oh My Zsh base ----
@@ -215,20 +207,96 @@ python3 -m pipx ensurepath
 pipx install thefuck
 ```
 
-Should now install cleanly with no `distutils` error.
+---
+#NERD
+---
+
+### 1) Check your current principal
+
+```bash
+aws sts get-caller-identity \
+  --query Arn --output text
+```
+
+Keep that ARN handy (we’ll call it `$CALLER_ARN` below) and note the Account ID portion.
 
 ---
 
-### 💡 Optional: Avoid This in the Future
+### 2) Simulate whether you can call `iam:CreateRole`
 
-Before using `pyenv install`, always make sure you’ve installed **all Python build dependencies**.
+Replace `<ACCOUNT_ID>` with your AWS account ID and `<ROLE_NAME>` with a hypothetical name, e.g. `loki-s3-access-role`:
 
-You can also install the **pyenv plugin** [`pyenv-doctor`](https://github.com/yyuu/pyenv-doctor) to help you identify missing deps:
+```bash
+CALLER_ARN=$(aws sts get-caller-identity --query Arn --output text)
+ACCOUNT_ID=$(echo $CALLER_ARN | cut -d: -f5)
+ROLE_NAME="loki-s3-access-role"
 
-```sh
-git clone https://github.com/yyuu/pyenv-doctor.git ~/.pyenv/plugins/pyenv-doctor
-pyenv doctor
+aws iam simulate-principal-policy \
+  --policy-source-arn "$CALLER_ARN" \
+  --action-names iam:CreateRole \
+  --resource-arns arn:aws:iam::$ACCOUNT_ID:role/$ROLE_NAME \
+  --query 'EvaluationResults[0].EvalDecision' \
+  --output text
 ```
+
+* If this prints `allowed`, you have permission to create that role.
+* If it prints `explicitDeny` (or `implicitDeny`), you do not.
+
+---
+
+### 3) (Optional) Actually create the role
+
+If you get `allowed` and want to test it:
+
+```bash
+cat > trust-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Service": "ecs-tasks.amazonaws.com"},
+    "Action": "sts:AssumeRole"
+  }]
+}
+EOF
+
+aws iam create-role \
+  --role-name $ROLE_NAME \
+  --assume-role-policy-document file://trust-policy.json
+```
+
+If that succeeds, you now have a role called `loki-s3-access-role`.
+
+---
+
+### 4) Delete the role
+
+If you created it (and it has no policies attached), simply:
+
+```bash
+aws iam delete-role --role-name $ROLE_NAME
+```
+
+If you attached any managed policies first, you must detach them:
+
+```bash
+aws iam detach-role-policy \
+  --role-name $ROLE_NAME \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+```
+
+Or for inline policies:
+
+```bash
+aws iam delete-role-policy \
+  --role-name $ROLE_NAME \
+  --policy-name MyInlinePolicy
+```
+
+Then run the `delete-role` command again.
+
+---
+
 
 
 

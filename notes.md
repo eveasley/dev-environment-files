@@ -102,7 +102,7 @@ function y() {
 
 ---
 
-### ✅ To Use This
+### To Use This
 
 1. Save it:
 
@@ -118,7 +118,7 @@ function y() {
 
 ---
 
-### 🧰 Requirements
+### Requirements
 
 Make sure these are installed in WSL:
 
@@ -142,13 +142,13 @@ Make sure these are installed in WSL:
 
 ---
 
-### 🧠 Why This Happens
+### Why This Happens
 
 Ubuntu (and many distros) now **split Python packaging tools** into separate packages. Pyenv compiles Python from source and **doesn’t bundle `distutils`** by default unless the right system packages are installed **before** the build.
 
 ---
 
-### ✅ Fix It
+### Fix It
 
 You need to install the **`python3-distutils` and related dev packages**, then **reinstall the Python version using pyenv**.
 
@@ -200,7 +200,7 @@ python3 -m ensurepip --upgrade
 python3 -m pip install --upgrade pip setuptools
 ```
 
-✅ Then test again:
+Then test again:
 
 ```sh
 python3 -m pipx ensurepath
@@ -208,7 +208,7 @@ pipx install thefuck
 ```
 
 ---
-#NERD
+# Verify AWS
 ---
 
 ### 1) Check your current principal
@@ -224,12 +224,12 @@ Keep that ARN handy (we’ll call it `$CALLER_ARN` below) and note the Account I
 
 ### 2) Simulate whether you can call `iam:CreateRole`
 
-Replace `<ACCOUNT_ID>` with your AWS account ID and `<ROLE_NAME>` with a hypothetical name, e.g. `loki-s3-access-role`:
+Replace `<ACCOUNT_ID>` with your AWS account ID and `<ROLE_NAME>` with `test-role`:
 
 ```bash
 CALLER_ARN=$(aws sts get-caller-identity --query Arn --output text)
 ACCOUNT_ID=$(echo $CALLER_ARN | cut -d: -f5)
-ROLE_NAME="loki-s3-access-role"
+ROLE_NAME="test-role"
 
 aws iam simulate-principal-policy \
   --policy-source-arn "$CALLER_ARN" \
@@ -265,7 +265,7 @@ aws iam create-role \
   --assume-role-policy-document file://trust-policy.json
 ```
 
-If that succeeds, you now have a role called `loki-s3-access-role`.
+If that succeeds, you now have a role called `test-role`.
 
 ---
 

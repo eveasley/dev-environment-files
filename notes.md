@@ -146,5 +146,89 @@ Make sure these are installed in WSL:
 | **yazi**                    | \`curl -sS [https://raw.githubusercontent.com/sxyazi/yazi/main/install.sh](https://raw.githubusercontent.com/sxyazi/yazi/main/install.sh)               | bash\` |
 
 ---
+`No module named distutils` during a `pyenv`-installed Python run (often triggered by `pipx` or `pip`) means your **Python installation is missing `distutils`**, which is a common issue on **Ubuntu/WSL with pyenv**.
 
-Let me know if you want a script that installs all these tools and sets up the `.zshrc` for any fresh WSL system.
+---
+
+### 🧠 Why This Happens
+
+Ubuntu (and many distros) now **split Python packaging tools** into separate packages. Pyenv compiles Python from source and **doesn’t bundle `distutils`** by default unless the right system packages are installed **before** the build.
+
+---
+
+### ✅ Fix It
+
+You need to install the **`python3-distutils` and related dev packages**, then **reinstall the Python version using pyenv**.
+
+---
+
+### 🔧 Step-by-Step Fix
+
+#### 1. **Install missing build dependencies**
+
+```sh
+sudo apt update
+sudo apt install -y \
+  build-essential \
+  libssl-dev \
+  zlib1g-dev \
+  libbz2-dev \
+  libreadline-dev \
+  libsqlite3-dev \
+  libncursesw5-dev \
+  libffi-dev \
+  liblzma-dev \
+  tk-dev \
+  uuid-dev \
+  libnss3-dev \
+  libgdbm-dev \
+  libdb-dev \
+  python3-distutils \
+  curl
+```
+
+#### 2. **Reinstall Python with pyenv (to include distutils)**
+
+For example, if you were using Python 3.12.3:
+
+```sh
+pyenv uninstall 3.12.3
+pyenv install 3.12.3
+pyenv global 3.12.3
+```
+
+You must **reinstall** because the missing dependencies prevent `distutils` from being included in the original build.
+
+#### 3. **Verify**
+
+After reinstall:
+
+```sh
+python3 -m ensurepip --upgrade
+python3 -m pip install --upgrade pip setuptools
+```
+
+✅ Then test again:
+
+```sh
+python3 -m pipx ensurepath
+pipx install thefuck
+```
+
+Should now install cleanly with no `distutils` error.
+
+---
+
+### 💡 Optional: Avoid This in the Future
+
+Before using `pyenv install`, always make sure you’ve installed **all Python build dependencies**.
+
+You can also install the **pyenv plugin** [`pyenv-doctor`](https://github.com/yyuu/pyenv-doctor) to help you identify missing deps:
+
+```sh
+git clone https://github.com/yyuu/pyenv-doctor.git ~/.pyenv/plugins/pyenv-doctor
+pyenv doctor
+```
+
+
+

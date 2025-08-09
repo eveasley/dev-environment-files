@@ -72,17 +72,19 @@ Notes:
 File on EFS at /shared-config/local-config.yaml
 
 Flip your ALB to internet-facing:
+```hcl
 resource "aws_lb" "app" {
-internal = true X
+# internal = true 
 internal = false
 }
-
+```
 - Ensure your TG is Fargate-friendly:
-```diff
+```hcl
 resource "aws_lb_target_group" "loki" {
    port     = 3100
    protocol = "HTTP"
    vpc_id   = var.vpc_id
-+    target_type = "ip"
+   target_type = "ip"
    # health_check ...
 }
+```

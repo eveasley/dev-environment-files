@@ -1,6 +1,7 @@
 # File: diagnostics.tf (new, at root)
 
 # After your loki module exists
+```hcl
 data "aws_ecs_container_definition" "loki" {
   task_definition = module.loki.task_definition_arn
   container_name  = "loki"
@@ -21,6 +22,7 @@ output "loki_log_group_effective" {
 output "loki_mount_points_effective" {
   value = data.aws_ecs_container_definition.loki.mount_points
 }
+```
 Do not feed these values back into ALB/TG creation—keep them for visibility only.
 
 No module edits required; no risk of cycles.
@@ -28,7 +30,7 @@ No module edits required; no risk of cycles.
 # efs_container_path = "/mnt/config"
 
 command = ["-config.file=/mnt/config/local-config.yaml"]
-
+```hcl
  module "loki" {
    source              = "./modules/ecs-service"
    name                = "loki"
@@ -64,6 +66,7 @@ command = ["-config.file=/mnt/config/local-config.yaml"]
      }
    ]
  }
+```
 Notes:
 
 File on EFS at /shared-config/local-config.yaml

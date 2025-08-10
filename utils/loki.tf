@@ -89,39 +89,39 @@ resource "aws_iam_role_policy_attachment" "loki_s3_attach_task" {
 # LOKI ECS SERVICE
 # #######################################
 
-module "loki" {
-  source = "./modules/ecs-service"
+# module "loki" {
+#   source = "./modules/ecs-service"
 
-  # service‐specific
-  name               = "loki"
-  image              = "public.ecr.aws/bitnami/grafana-loki:3.5.0"
-  container_port     = 3100
-  cpu                = 512
-  memory             = 1024
-  env_vars           = {}
-  region             = var.region
-  execution_role_arn = aws_iam_role.ecs_execution.arn
-  task_role_arn      = aws_iam_role.loki_task.arn
+#   # service‐specific
+#   name               = "loki"
+#   image              = "public.ecr.aws/bitnami/grafana-loki:3.5.0"
+#   container_port     = 3100
+#   cpu                = 512
+#   memory             = 1024
+#   env_vars           = {}
+#   region             = var.region
+#   execution_role_arn = aws_iam_role.ecs_execution.arn
+#   task_role_arn      = aws_iam_role.loki_task.arn
 
-  cluster_id = module.cluster.cluster_id
-  ecs_sg_id  = module.cluster.ecs_sg_id
+#   cluster_id = module.cluster.cluster_id
+#   ecs_sg_id  = module.cluster.ecs_sg_id
 
-  vpc_id     = var.vpc_id
-  subnet_ids = var.subnet_ids
+#   vpc_id     = var.vpc_id
+#   subnet_ids = var.subnet_ids
 
-  # opt‐in EFS
-  efs_file_system_id  = module.efs.efs_file_system_id
-  efs_access_point_id = module.efs.efs_access_point_id
-  efs_sg_id           = module.efs.efs_sg_id
-  efs_container_path  = "/mnt/config"
-  command             = ["-config.file=/mnt/config/loki-conf/loki-config.yaml"]
-  load_balancers = [
-    {
-      container_name   = "loki"
-      container_port   = 3100
-      target_group_arn = aws_lb_target_group.loki.arn
-    }
-  ]
-  depends_on = [module.efs]
-}
+#   # opt‐in EFS
+#   efs_file_system_id  = module.efs.efs_file_system_id
+#   efs_access_point_id = module.efs.efs_access_point_id
+#   efs_sg_id           = module.efs.efs_sg_id
+#   efs_container_path  = "/mnt/config"
+#   command             = ["-config.file=/mnt/config/loki-conf/loki-config.yaml"]
+#   load_balancers = [
+#     {
+#       container_name   = "loki"
+#       container_port   = 3100
+#       target_group_arn = aws_lb_target_group.loki.arn
+#     }
+#   ]
+#   depends_on = [module.efs]
+# }
 

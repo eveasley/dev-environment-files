@@ -4,12 +4,12 @@ resource "aws_security_group" "efs_mount" {
   description = "Allow NFS from ECS tasks"
 
   ingress {
-    from_port       = 2049
-    to_port         = 2049
-    protocol        = "tcp"
+    from_port = 2049
+    to_port   = 2049
+    protocol  = "tcp"
     security_groups = [
       var.ecs_sg_id,
-      var.ec2_sg_id 
+      var.ec2_sg_id
     ]
   }
 
@@ -20,10 +20,14 @@ resource "aws_security_group" "efs_mount" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name        = "${var.name_prefix}-${var.environment}-efs-mount-sg"
-    Environment = var.environment
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name_prefix}-${var.environment}"
+      Environment = var.environment
+    }
+  )
+
 }
 
 resource "aws_efs_file_system" "this" {

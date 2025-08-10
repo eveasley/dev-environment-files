@@ -38,51 +38,51 @@ resource "aws_ecs_task_definition" "this" {
     }
   }
 
- container_definitions = jsonencode([
-  merge(
-    {
-      name         = var.name
-      image        = var.image
-      cpu          = var.cpu
-      memory       = var.memory
-      essential    = true
-      portMappings = [{
-        containerPort = var.container_port
-        protocol      = "tcp"
-      }]
-      environment = [
-        for k, v in var.env_vars : { name = k, value = v }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = "/ecs/${var.name}"
-          awslogs-region        = var.region
-          awslogs-stream-prefix = var.name
+  container_definitions = jsonencode([
+    merge(
+      {
+        name      = var.name
+        image     = var.image
+        cpu       = var.cpu
+        memory    = var.memory
+        essential = true
+        portMappings = [{
+          containerPort = var.container_port
+          protocol      = "tcp"
+        }]
+        environment = [
+          for k, v in var.env_vars : { name = k, value = v }
+        ]
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-group         = "/ecs/${var.name}"
+            awslogs-region        = var.region
+            awslogs-stream-prefix = var.name
+          }
         }
-      }
-    },
-    length(var.command) > 0 ? { command = var.command } : {},
-    var.efs_file_system_id != "" ? {
-      mountPoints = concat(
-        [
-          {
-            sourceVolume  = "efs"
-            containerPath = local.efs_mount_path
-            readOnly      = false
-          }
-        ],
-        var.mount_certs ? [
-          {
-            sourceVolume  = "efs"
-            containerPath = "/etc/ssl/certs"
-            readOnly      = true
-          }
-        ] : []
-      )
-    } : {}
-  )
-])
+      },
+      length(var.command) > 0 ? { command = var.command } : {},
+      var.efs_file_system_id != "" ? {
+        mountPoints = concat(
+          [
+            {
+              sourceVolume  = "efs"
+              containerPath = local.efs_mount_path
+              readOnly      = false
+            }
+          ],
+          var.mount_certs ? [
+            {
+              sourceVolume  = "efs"
+              containerPath = "/etc/ssl/certs"
+              readOnly      = true
+            }
+          ] : []
+        )
+      } : {}
+    )
+  ])
 }
 # data "aws_region" "current" {}
 
@@ -98,8 +98,8 @@ resource "aws_ecs_service" "this" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.subnet_ids
-    security_groups = [var.ecs_sg_id]
+    subnets          = var.subnet_ids
+    security_groups  = [var.ecs_sg_id]
     assign_public_ip = false
   }
   dynamic "load_balancer" {

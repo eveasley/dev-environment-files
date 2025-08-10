@@ -54,9 +54,13 @@ resource "aws_lb_target_group" "loki" {
     unhealthy_threshold = 2
   }
 
-  tags = {
-    Name = "${var.name_prefix}-${var.environment}-loki-tg"
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-${var.environment}-alb-sg"
+    }
+  )
+
 }
 
 resource "aws_lb_listener" "http" {

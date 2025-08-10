@@ -5,7 +5,11 @@ data "aws_region" "current" {}
 
 resource "aws_ecs_cluster" "this" {
   name = var.cluster_name
-  tags = var.tags
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-${var.environment}" }
+  )
+
 
 }
 
@@ -15,8 +19,8 @@ resource "aws_ecs_cluster_capacity_providers" "this" {
 
   default_capacity_provider_strategy {
     capacity_provider = "FARGATE"
-    weight = 1
-    base = 0
+    weight            = 1
+    base              = 0
   }
 }
 

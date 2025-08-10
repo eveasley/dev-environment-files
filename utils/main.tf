@@ -3,7 +3,7 @@ module "cluster" {
   cluster_name    = var.cluster_name
   vpc_id          = var.vpc_id
   route_table_ids = var.route_table_ids
-  tags            = { Environment = var.environment }
+  tags            = var.tags
   region          = var.region
   subnet_ids      = var.subnet_ids
 }
@@ -15,11 +15,11 @@ module "efs" {
   ec2_sg_id   = var.ec2_sg_id
   name_prefix = var.name_prefix
   environment = var.environment
+  tags        = var.tags
 }
 
 resource "aws_s3_bucket" "configs" {
-  bucket = "metrics-conf-${var.environment}" # Configs bucket with environment suffix
-
+  bucket = "metrics-conf-${var.environment}"
   tags = {
     Name        = "configs-bucket"
     Environment = var.environment
@@ -36,11 +36,11 @@ resource "aws_s3_bucket_versioning" "configs_versioning" {
 data "aws_iam_policy_document" "efs_helper_s3" {
   statement {
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::metrics-conf-dev"]
+    resources = ["arn:aws:s3:::metrics-conf-${var.environment}"]
   }
   statement {
     actions   = ["s3:GetObject", "s3:PutObject"]
-    resources = ["arn:aws:s3:::metrics-conf-dev/*"]
+    resources = ["arn:aws:s3:::metrics-conf-${var.environment}/*"]
   }
 }
 

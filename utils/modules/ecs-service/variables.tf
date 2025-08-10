@@ -1,7 +1,3 @@
-########################################
-# VARIABLES
-########################################
-
 variable "name" {
   description = "Logical name for this ECS service (used as family, service name, log‐prefix)"
   type        = string
@@ -95,13 +91,13 @@ variable "efs_sg_id" {
 }
 
 variable "load_balancers" {
-   description = "List of ALB attachments: container_name, container_port,   target_group_arn"
-   type = list(object({
-     container_name   = string
-     container_port   = number
-     target_group_arn = string
-   }))
-   default = []
+  description = "List of ALB attachments: container_name, container_port,   target_group_arn"
+  type = list(object({
+    container_name   = string
+    container_port   = number
+    target_group_arn = string
+  }))
+  default = []
 }
 
 variable "mount_certs" {

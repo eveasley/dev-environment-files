@@ -50,6 +50,12 @@ variable "route_table_ids" {
   default     = []
 }
 
+variable "private_route_table_ids" {
+  description = "List of private route table IDs to update with NAT gateway route"
+  type        = list(string)
+}
+
+
 ########################################
 # EFS
 ########################################
@@ -68,9 +74,18 @@ variable "loki_bucket_name" {
   default     = "ryn-ops-loki-logs"
 }
 
-
 variable "ec2_sg_id" {
   description = "Security group ID for EC2 instances that need access to EFS"
   type        = string
   default     = "sg-0dbf5dd980a99f8e6"
+}
+
+
+variable "tags" {
+  description = "Common tags for all resources"
+  type        = map(string)
+  default = {
+    Environment = "dev"
+    Project     = "obs-stack"
+  }
 }

@@ -28,3 +28,9 @@ variable "environment" {
   description = "Deployment environment (e.g., dev, prod)"
   type        = string
 }
+
+variable "attach_efs" {
+  description = "Whether to create and attach EFS"
+  type        = bool
+  default     = false
+}

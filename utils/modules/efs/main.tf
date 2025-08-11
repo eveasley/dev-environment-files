@@ -1,4 +1,5 @@
 resource "aws_security_group" "efs_mount" {
+  count       = var.attach_efs ? 1 : 0
   name        = "${var.name_prefix}-${var.environment}-efs-mount-sg"
   vpc_id      = var.vpc_id
   description = "Allow NFS from ECS tasks"
@@ -23,33 +24,37 @@ resource "aws_security_group" "efs_mount" {
   tags = merge(
     var.tags,
     {
-      Name        = "${var.name_prefix}-${var.environment}"
+      Name        = "${var.name_prefix}-${var.environment}-efs-mount-sg"
       Environment = var.environment
     }
   )
-
 }
 
 resource "aws_efs_file_system" "this" {
-  creation_token   = "${var.name_prefix}-${var.environment}"
+  count           = var.attach_efs ? 1 : 0
+  creation_token  = "${var.name_prefix}-${var.environment}-efs"
   performance_mode = "generalPurpose"
   throughput_mode  = "bursting"
 
-  tags = {
-    Name        = "${var.name_prefix}-${var.environment}-efs"
-    Environment = var.environment
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.name_prefix}-${var.environment}-efs"
+      Environment = var.environment
+    }
+  )
 }
 
 resource "aws_efs_mount_target" "this" {
-  for_each        = toset(var.subnet_ids)
-  file_system_id  = aws_efs_file_system.this.id
-  subnet_id       = each.value
-  security_groups = [aws_security_group.efs_mount.id]
+  count          = var.attach_efs ? length(var.subnet_ids) : 0
+  file_system_id = aws_efs_file_system.this[0].id
+  subnet_id      = var.subnet_ids[count.index]
+  security_groups = [aws_security_group.efs_mount[0].id]
 }
 
 resource "aws_efs_access_point" "this" {
-  file_system_id = aws_efs_file_system.this.id
+  count          = var.attach_efs ? 1 : 0
+  file_system_id = aws_efs_file_system.this[0].id
 
   posix_user {
     uid = 1000

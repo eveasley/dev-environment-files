@@ -14,23 +14,6 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "attach_efs" {
-  description = "Whether to create and expose EFS for this cluster"
-  type        = bool
-  default     = false
-}
-
-variable "efs_subnet_ids" {
-  description = "Private subnet IDs (one per AZ) to put EFS mount targets in"
-  type        = list(string)
-  default     = []
-}
-
-variable "efs_name_prefix" {
-  description = "Name prefix for EFS resources (will fall back to cluster_name if empty)"
-  type        = string
-  default     = ""
-}
 
 variable "route_table_ids" {
   description = "List of route table IDs for the S3 VPC endpoint"
@@ -45,4 +28,23 @@ variable "region" {
 variable "subnet_ids" {
   description = "List of subnet IDs for VPC endpoints and ECS tasks"
   type        = list(string)
+}
+
+# EFS
+variable "efs_file_system_id" {
+  description = "EFS File System ID"
+  type        = string
+  default     = ""
+}
+
+variable "efs_access_point_id" {
+  description = "EFS Access Point ID"
+  type        = string
+  default     = ""
+}
+
+variable "efs_sg_id" {
+  description = "Security group ID for EFS mount target"
+  type        = string
+  default     = ""
 }

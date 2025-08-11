@@ -1,3 +1,7 @@
+locals {
+  ecs_tasks_sg_id = module.cluster.ecs_sg_id
+}
+
 resource "aws_security_group" "alb" {
   name        = "${var.name_prefix}-${var.environment}-alb-sg"
   description = "Allow HTTP from Zscaler only"
@@ -55,11 +59,11 @@ resource "aws_lb_target_group" "loki" {
   }
 
   tags = merge(
-    var.tags,
-    {
-      Name = "${var.name_prefix}-${var.environment}-alb-sg"
-    }
-  )
+  var.tags,
+  {
+    Name = "${var.name_prefix}-${var.environment}-alb-sg"
+  }
+)
 
 }
 
@@ -72,4 +76,44 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.loki.arn
   }
+}
+
+resource "aws_security_group_rule" "allow_http_from_alb" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_tasks_sg_id           
+  source_security_group_id = aws_security_group.alb.id     
+  description              = "Allow HTTP from ALB"
+}
+
+resource "aws_security_group_rule" "allow_loki_from_alb" {
+  type                     = "ingress"
+  from_port                = 3100
+  to_port                  = 3100
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_tasks_sg_id
+  source_security_group_id = aws_security_group.alb.id
+  description              = "Allow Loki from ALB"
+}
+
+resource "aws_security_group_rule" "allow_prometheus_from_alb" {
+  type                     = "ingress"
+  from_port                = 9090
+  to_port                  = 9090
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_tasks_sg_id
+  source_security_group_id = aws_security_group.alb.id
+  description              = "Allow Prometheus from ALB"
+}
+
+resource "aws_security_group_rule" "allow_grafana_from_alb" {
+  type                     = "ingress"
+  from_port                = 3000
+  to_port                  = 3000
+  protocol                 = "tcp"
+  security_group_id        = local.ecs_tasks_sg_id
+  source_security_group_id = aws_security_group.alb.id
+  description              = "Allow Grafana from ALB"
 }

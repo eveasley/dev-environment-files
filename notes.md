@@ -297,6 +297,33 @@ Then run the `delete-role` command again.
 
 ---
 
+###  Use AWS CLI to Get Subnet CIDR and Count Used IPs
+
+You can get the subnet CIDR:
+
+```bash
+aws ec2 describe-subnets --subnet-ids subnet-xxxxxxx --query 'Subnets[0].CidrBlock' --output text
+```
+
+Calculate how many IPs are available total (CIDR block size minus AWS reserved IPs).
+
+---
+
+### List All ENIs in the Subnet (Shows Used IPs)
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxxxx --query 'NetworkInterfaces[*].PrivateIpAddress' --output text | wc -l
+```
+
+Count how many IPs are assigned.
+
+---
+
+### Check Secondary IPs on ENIs (Extra IP consumption)
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxxxx --query 'NetworkInterfaces[*].SecondaryPrivateIpAddressCount' --output text | awk '{s+=$1} END {print s}'
+```
 
 
 

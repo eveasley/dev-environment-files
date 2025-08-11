@@ -1,58 +1,7 @@
 #!/bin/bash
 
-REPO_OWNER="YOUR_REPO_OWNER"
-REPO_NAME="YOUR_REPO_NAME"
+REPO="YOUR_ORG/YOUR_REPO"
 PROJECT_NAME="Infra Roadmap"
-
-# Find the project ID by name
-PROJECT_ID=$(gh api graphql -f query='
-query($owner: String!, $name: String!) {
-  repository(owner: $owner, name: $name) {
-    projectsV2(first: 10) {
-      nodes {
-        id
-        title
-      }
-    }
-  }
-}' -F owner="$REPO_OWNER" -F name="$REPO_NAME" --jq '.data.repository.projectsV2.nodes[] | select(.title=="'"$PROJECT_NAME"'") | .id')
-
-if [ -z "$PROJECT_ID" ]; then
-  echo "Project \"$PROJECT_NAME\" not found!"
-  exit 1
-fi
-
-# Function to create an issue and add it to the project
-create_issue() {
-  local title=$1
-  local body=$2
-
-  # Create issue
-  ISSUE_URL=$(gh issue create -R "$REPO_OWNER/$REPO_NAME" -t "$title" -b "$body" --json url --jq '.url')
-  echo "Created issue: $title"
-
-  # Get issue node ID for adding to project
-  ISSUE_NODE_ID=$(gh api graphql -f query='
-  query($owner: String!, $name: String!, $issueNumber: Int!) {
-    repository(owner: $owner, name: $name) {
-      issue(number: $issueNumber) {
-        id
-      }
-    }
-  }' -F owner="$REPO_OWNER" -F name="$REPO_NAME" -F issueNumber=$(basename "$ISSUE_URL") --jq '.data.repository.issue.id')
-
-  # Add issue to project
-  gh api graphql -f query='
-  mutation($projectId: ID!, $contentId: ID!) {
-    addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-      item {
-        id
-      }
-    }
-  }' -F projectId="$PROJECT_ID" -F contentId="$ISSUE_NODE_ID" >/dev/null
-}
-
-# Define issues with titles and bodies
 
 declare -a issues=(
   "Create ECS Cluster and Configure Networking||Set up ECS cluster with Fargate, configure VPC, private subnets, route tables, and NAT gateway or TGW routing as needed."
@@ -73,10 +22,10 @@ declare -a issues=(
   "Adjust and Tune Infrastructure||Make adjustments on security groups, IAM roles, autoscaling based on testing."
 )
 
-# Loop through and create issues
 for issue in "${issues[@]}"; do
   IFS="||" read -r title body <<< "$issue"
-  create_issue "$title" "$body"
+  gh issue create -R "$REPO" -t "$title" -b "$body" -p "$PROJECT_NAME"
+  echo "Created issue: $title"
 done
 
-echo "All issues created and added to project \"$PROJECT_NAME\"."
+echo "All issues created and assigned to project '$PROJECT_NAME'."

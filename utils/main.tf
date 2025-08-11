@@ -1,12 +1,3 @@
-module "cluster" {
-  source          = "./modules/cluster"
-  cluster_name    = var.cluster_name
-  vpc_id          = var.vpc_id
-  route_table_ids = var.route_table_ids
-  tags            = var.tags
-  region          = var.region
-  subnet_ids      = var.subnet_ids
-}
 module "efs" {
   source      = "./modules/efs"
   vpc_id      = var.vpc_id
@@ -16,8 +7,19 @@ module "efs" {
   name_prefix = var.name_prefix
   environment = var.environment
   tags        = var.tags
+  attach_efs  = true
 }
 
+module "cluster" {
+  source          = "./modules/cluster"
+  cluster_name    = var.cluster_name
+  vpc_id          = var.vpc_id
+  route_table_ids = var.route_table_ids
+  tags            = var.tags
+  region          = var.region
+  subnet_ids      = var.subnet_ids
+  # No need for efs_file_system_id etc. here
+}
 resource "aws_s3_bucket" "configs" {
   bucket = "metrics-conf-${var.environment}"
   tags = {

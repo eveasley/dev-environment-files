@@ -325,5 +325,14 @@ Count how many IPs are assigned.
 aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxxxx --query 'NetworkInterfaces[*].SecondaryPrivateIpAddressCount' --output text | awk '{s+=$1} END {print s}'
 ```
 
+---
+```bash
+jq -r '
+"resource \"aws_security_group\" \"" + .name + "\" {\n  name = \"" + .values.name + "\"\n  description = \"" + .values.description + "\"\n  vpc_id = \"" + .values.vpc_id + "\"\n\n" +
+(.values.ingress[]? | "  ingress {\n    from_port = \(.from_port)\n    to_port = \(.to_port)\n    protocol = \"\(.protocol)\"\n    cidr_blocks = [\(.cidr_blocks | map("\""+.+"\"") | join(", "))]\n  }\n") +
+(.values.egress[]? | "  egress {\n    from_port = \(.from_port)\n    to_port = \(.to_port)\n    protocol = \"\(.protocol)\"\n    cidr_blocks = [\(.cidr_blocks | map("\""+.+"\"") | join(", "))]\n  }\n") +
+"  tags = {\n" + (.values.tags | to_entries[] | "    \(.key) = \"\(.value)\"") + "\n  }\n}"
+' sg.json
+```
 
 

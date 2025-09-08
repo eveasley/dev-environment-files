@@ -334,5 +334,46 @@ jq -r '
 "  tags = {\n" + (.values.tags | to_entries[] | "    \(.key) = \"\(.value)\"") + "\n  }\n}"
 ' sg.json
 ```
+---
+```
+# Memberlist is needed for ECS/EKS multi-task deployments
+memberlist:
+  join_members:
+    - loki-memberlist  # adjust if you use a different service discovery setup
 
+# Schema v13 (latest as of now)
+schema_config:
+  configs:
+    - from: 2022-06-01
+      store: tsdb               # uses TSDB index store
+      object_store: s3
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  aws:
+    s3: s3://<your-bucket-name>
+    region: us-east-1           # adjust region
+    s3forcepathstyle: false     # set true only if using MinIO/localstack
+  tsdb:
+    dir: /var/loki/tsdb          # TSDB local cache directory
+    retention_period: 336h       # 14 days
+    wal_compression: true
+
+compactor:
+  working_directory: /var/loki/compactor
+  shared_store: s3
+  retention_enabled: true
+  retention_delete_delay: 2h     # delay before actual deletion
+  delete_request_cancel_period: 24h
+
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h   # 7 days
+  ingestion_rate_mb: 4
+  ingestion_burst_size_mb: 8
+  max_cache_freshness_per_query: 10m
+```
 

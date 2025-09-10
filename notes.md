@@ -376,4 +376,40 @@ limits_config:
   ingestion_burst_size_mb: 8
   max_cache_freshness_per_query: 10m
 ```
+---
+```
+[
+  {
+    "name": "${name}",
+    "image": "${image_repo}:${image_tag}",
+    "cpu": ${cpu},
+    "memory": ${memory},
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": ${container_port},
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [
+      % for key, value in env ~}
+      { "name": "${key}", "value": "${value}" }% if key != env|keys[-1] %},{% endif %}
+      {% endfor %}
+    ],
+    "secrets": [
+      % for key, value in secrets ~}
+      { "name": "${key}", "value": "${value}" }% if key != secrets|keys[-1] %},{% endif %}
+      {% endfor %}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${log_group}",
+        "awslogs-region": "${aws_region}",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]
+```
 

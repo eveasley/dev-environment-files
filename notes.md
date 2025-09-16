@@ -322,220 +322,61 @@ Count how many IPs are assigned.
 ### Check Secondary IPs on ENIs (Extra IP consumption)
 
 ```
-provider "grafana" {
-  alias = "grafana_stack"
-  url   = "https://grafana.${var.domain_name}" 
-  auth  = var.grafana_api_key
-}
+import os
+import subprocess
+import requests
 
-#########################
-# GRAF-CONF VARIABLES
-#########################
-variable "grafana_api_key" {
-  description = "Grafana Instance API key (service account token)"
-  type        = string
-  sensitive   = true
-}
+GHE_URL = "https://ghe.example.com/api/v3"
+GHE_ORG = "your-enterprise-org"
+GH_ORG = "your-saas-org"
 
-variable "domain_name" {
-  description = "Custom domain name (without prefix), e.g. example.com"
-  type        = string
-}
+GHE_TOKEN = os.getenv("GHE_TOKEN")
+GH_TOKEN = os.getenv("GH_TOKEN")
 
-variable "oidc_name" {
-  description = "Display name for OIDC provider in Grafana"
-  type        = string
-}
+headers_ghe = {"Authorization": f"token {GHE_TOKEN}"}
+headers_gh = {"Authorization": f"token {GH_TOKEN}"}
 
-variable "oidc_auth_url" {
-  description = "OIDC provider authorization URL"
-  type        = string
-}
+repos = []
+page = 1
+while True:
+    url = f"{GHE_URL}/orgs/{GHE_ORG}/repos?per_page=100&page={page}"
+    r = requests.get(url, headers=headers_ghe)
+    r.raise_for_status()
+    data = r.json()
+    if not data:
+        break
+    repos.extend(data)
+    page += 1
 
-variable "oidc_token_url" {
-  description = "OIDC provider token URL"
-  type        = string
-}
+print(f"Found {len(repos)} repositories to migrate.")
 
-variable "oidc_api_url" {
-  description = "OIDC provider user info URL"
-  type        = string
-}
+for repo in repos:
+    name = repo["name"]
+    ssh_url = repo["ssh_url"]
 
-variable "oidc_client_id" {
-  description = "OIDC client ID"
-  type        = string
-}
+    print(f"\nMigrating: {name}")
+    subprocess.run(["git", "clone", "--mirror", ssh_url, name], check=True)
+    os.chdir(name)
 
-variable "oidc_client_secret" {
-  description = "OIDC client secret"
-  type        = string
-  sensitive   = true
-}
+    create_url = f"https://api.github.com/orgs/{GH_ORG}/repos"
+    payload = {"name": name, "private": True}
+    r = requests.post(create_url, headers=headers_gh, json=payload)
 
-#########################
-# NET
-#########################
-variable "vpc_id" {
-  description = "VPC ID for consumer/non-routable network"
-  type        = string
-}
+    if r.status_code == 201:
+        print(f"Created repo {name}")
+    elif r.status_code == 422:
+        print(f"Repo {name} already exists")
+    else:
+        print(f"Failed creating repo {name}: {r.text}")
 
-variable "consumer_subnet_id" {
-  description = "Subnet ID for non-routable/private subnet (EFS mount target)"
-  type        = string
-}
+    dest_url = f"https://{GH_TOKEN}@github.com/{GH_ORG}/{name}.git"
+    subprocess.run(["git", "push", "--mirror", dest_url], check=True)
 
-variable "routable_subnet_id" {
-  description = "Subnet ID for routable subnet (PrivateLink interface endpoint)"
-  type        = string
-}
+    os.chdir("..")
+    subprocess.run(["rm", "-rf", name])
 
-variable "nlb_arn" {
-  description = "ARN of the Network Load Balancer to expose via PrivateLink"
-  type        = string
-}
+print("\nMigration completed!")
 
-
-
-resource "grafana_sso_settings" "oidc" {
-  provider_name = "generic_oauth"
-
-  oauth2_settings {
-    name              = var.oidc_name      # "Company OIDC"
-    auth_url          = var.oidc_auth_url
-    token_url         = var.oidc_token_url
-    api_url           = var.oidc_api_url   # user info endpoint
-    client_id         = var.oidc_client_id
-    client_secret     = var.oidc_client_secret
-    scopes            = "openid email profile"
-    allow_sign_up     = false
-    auto_login        = false
-    use_pkce          = true
-    use_refresh_token = true
-    # allowed_domains or team/role mapping can be added as needed
-  }
-}
-
-#########################
-# NETWORKING CONT'D
-#########################
-resource "aws_vpc_endpoint_service" "this" {
-  acceptance_required        = false
-  network_load_balancer_arns = [aws_lb.your_nlb.arn]
-}
-
--- # PrivateLink interface endpoint in routable subnet
-resource "aws_vpc_endpoint" "this" {
-  vpc_id              = aws_vpc.consumer.id
-  service_name        = aws_vpc_endpoint_service.this.service_name
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [aws_subnet.routable_subnet.id]
-  private_dns_enabled = false
-}
-
-
-#########################
-# EFS with encryption
-#########################
-resource "aws_efs_file_system" "this" {
-  encrypted = true
-
-  lifecycle_policy {
-    transition_to_ia = "AFTER_30_DAYS"
-  }
-
-  tags = {
-    Name = "private-efs"
-  }
-}
-
-# Security group to allow ECS tasks to connect (NFS = port 2049)
-resource "aws_security_group" "efs_sg" {
-  name        = "efs-sg"
-  description = "Allow NFS from ECS tasks"
-  vpc_id      = aws_vpc.consumer.id   # replace with your non-routable VPC id
-
-  ingress {
-    from_port   = 2049
-    to_port     = 2049
-    protocol    = "tcp"
-    cidr_blocks = [aws_vpc.consumer.cidr_block]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# EFS Mount Target in private subnet
-resource "aws_efs_mount_target" "this" {
-  file_system_id  = aws_efs_file_system.this.id
-  subnet_id       = aws_subnet.consumer_subnet.id   # your non-routable/private subnet
-  security_groups = [aws_security_group.efs_sg.id]
-}
-
-# EFS Access Point (preferred for ECS)
-resource "aws_efs_access_point" "this" {
-  file_system_id = aws_efs_file_system.this.id
-
-  posix_user {
-    gid = 1000
-    uid = 1000
-  }
-
-  root_directory {
-    path = "/ecs"
-    creation_info {
-      owner_gid   = 1000
-      owner_uid   = 1000
-      permissions = "0755"
-    }
-  }
-}
-
-#########################
-# Outputs
-#########################
-# EFS DNS name (use in ECS task volume)
-output "efs_dns_name" {
-  value = aws_efs_file_system.this.dns_name
-}
-
-output "efs_access_point" {
-  value = aws_efs_access_point.this.id
-}
-
-
-
--- "volumes": [
---   {
---     "name": "efs-volume",
---     "efsVolumeConfiguration": {
---       "fileSystemId": "<efs id>",
---       "transitEncryption": "ENABLED",
---       "authorizationConfig": {
---         "accessPointId": "<access point id>",
---         "iam": "DISABLED"
---       }
---     }
---   }
--- ],
--- "containerDefinitions": [
---   {
---     "name": "app",
---     "image": "nginx",
---     "mountPoints": [
---       {
---         "containerPath": "/mnt/data",
---         "sourceVolume": "efs-volume"
---       }
---     ]
---   }
--- ]
 
 ```
 
